@@ -1,0 +1,13 @@
+flask
+flask-cors
+python-dotenv
+SQLAlchemy
+certifi
+langchain
+langchain-core
+bcrypt
+PyJWT
+waitress
+crewai
+litellm
+json-repair

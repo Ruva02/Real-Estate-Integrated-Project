@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+:root {
+    --background: #f8fafc; /* Slate 50 */
+    --foreground: #0f172a; /* Slate 900 */
+    --muted: #f1f5f9; /* Slate 100 */
+    --border: #e2e8f0; /* Slate 200 */
+    --primary: #1e293b; /* Slate 800 - Professional Navy */
+    --primary-hover: #0f172a;
+    --primary-soft: #f1f5f9;
+    --accent: #6366f1; /* Muted Indigo */
+    --text-main: #334155; /* Slate 700 */
+    --text-muted: #64748b; /* Slate 500 */
+    --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+}
+
+body {
+    background-color: var(--background);
+    color: var(--text-main);
+    font-family: 'Inter', -apple-system, sans-serif;
+    min-height: 100vh;
+}
+
+h1, h2, h3 {
+    color: var(--foreground);
+    font-weight: 700;
+}
+
+.glass-morphism {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    box-shadow: var(--card-shadow);
+}
+
+.chat-bubble-user {
+    background: var(--primary);
+    color: white;
+    border-radius: 12px 12px 2px 12px;
+}
+
+.chat-bubble-agent {
+    background: #ffffff;
+    color: var(--text-main);
+    border: 1px solid var(--border);
+    border-radius: 12px 12px 12px 2px;
+}
+
+.sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    color: var(--text-muted);
+    transition: all 0.2s ease;
+}
+
+.sidebar-item:hover, .sidebar-item.active {
+    background-color: var(--muted);
+    color: var(--primary);
+}
+
+.property-card {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    transition: all 0.2s ease;
+    overflow: hidden;
+}
+
+.property-card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+    border-color: var(--accent);
+}
+
+.scroll-hide::-webkit-scrollbar {
+    display: none;
+}
+
+.scroll-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}

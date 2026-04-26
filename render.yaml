@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: haven-ai-backend
+    runtime: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && python run_prod.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
