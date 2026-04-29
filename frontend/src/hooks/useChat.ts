@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Message, Property } from '../types';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5016';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:5016` : 'http://localhost:5016');
 
 export const useChat = (token: string | null, handleLogout: () => void, mode: 'concierge' | 'tutor' = 'concierge') => {
     const [messages, setMessages] = useState<Message[]>([
