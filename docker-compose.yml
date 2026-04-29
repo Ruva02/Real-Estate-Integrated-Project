@@ -1,0 +1,17 @@
+version: '3.8'
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "5016:5016"
+    environment:
+      - NODE_ENV=production
+  
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://52.91.50.233:5016
+    depends_on:
+      - backend

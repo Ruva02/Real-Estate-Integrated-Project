@@ -23,7 +23,8 @@ def create_app():
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3001",
         "http://52.66.79.240",
-        "http://52.66.79.240:3000"
+        "http://52.66.79.240:3000",
+        "http://52.91.50.233"
     ], supports_credentials=True)
 
     # Start Database Connection (SQLite Initialization)
