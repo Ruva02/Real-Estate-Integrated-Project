@@ -36,4 +36,4 @@ spec:
     - protocol: TCP
       port: 5016
       targetPort: 5016
-  type: ClusterIP
+  type: LoadBalancer
