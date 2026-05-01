@@ -22,21 +22,30 @@ load_dotenv(dotenv_path=env_path)
 def perform_db_search(query_text: str) -> str:
     db = SessionLocal()
     try:
-        # More flexible regex to handle various formats
-        action_match = re.search(r"action\s*[:=]\s*(\w+)", query_text, re.I)
-        location_match = re.search(r"location\s*[:=]\s*([\w\s]+)", query_text, re.I)
-        bhk_match = re.search(r"bhk\s*[:=]\s*(\d+)", query_text, re.I)
-        price_match = re.search(r"price\s*[:=]\s*(\d+)", query_text, re.I)
+        # Improved regex to handle commas, newlines, and spaces more robustly
+        def get_val(key, text):
+            match = re.search(fr"{key}\s*[:=]\s*([^,\n;]+)", text, re.I)
+            return match.group(1).strip() if match else None
+
+        action = get_val("action", query_text)
+        location = get_val("location", query_text)
+        bhk = get_val("bhk", query_text)
+        price = get_val("price", query_text)
         
+        print(f"DEBUG: Search Filters - Action: {action}, Location: {location}, BHK: {bhk}, Price: {price}")
+
         q = db.query(Property)
-        if action_match: 
-            q = q.filter(func.lower(Property.action) == action_match.group(1).lower())
-        if location_match: 
-            q = q.filter(func.lower(Property.city) == location_match.group(1).strip().lower())
-        if bhk_match: 
-            q = q.filter(Property.bedrooms == int(bhk_match.group(1)))
-        if price_match: 
-            q = q.filter(Property.price <= float(price_match.group(1)))
+        if action: 
+            q = q.filter(func.lower(Property.action) == action.lower())
+        if location: 
+            # Use LIKE for more flexible location matching
+            q = q.filter(Property.city.ilike(f"%{location}%"))
+        if bhk: 
+            try: q = q.filter(Property.bedrooms == int(bhk))
+            except: pass
+        if price: 
+            try: q = q.filter(Property.price <= float(price))
+            except: pass
             
         results = q.order_by(Property.price.asc()).limit(6).all()
         if not results: return "[No matches found]"
@@ -149,9 +158,9 @@ def process_chat_message(email: str, message: str, mode: str = 'concierge') -> s
             1. ANALYSIS: ALWAYS include an <analysis> JSON block at the end of every response.
                Format: <analysis>{"category": "Rent/Buy/Sell", "location": "City", "budget": "Amount", "bhk": "Number", "urgency": "High/Low"}</analysis>
             2. INFORMATION GATHERING: If the user hasn't provided their Location, Budget, or BHK, ask for them politely. Do not ask for everything at once; be conversational.
-            3. SEARCH: Whenever you have a location and action (buy/rent), you MUST include a line: SEARCH: action=..., location=... 
+            3. SEARCH: Whenever you have a location and action (buy/rent), you MUST include a line EXACTLY like this: SEARCH: action=buy, location=Indore, bhk=3, price=5000000
                This triggers the property grid. DO NOT ASK for more info if you already have these two. Just trigger the search.
-            4. PERSISTENCE: If the user provides info, use it immediately. Do not repeat questions the user has already answered.
+            4. PERSISTENCE: If the user provides info (like "Indore"), remember it forever in the conversation. Do not repeat questions the user has already answered.
             5. NO TEXT LISTS: NEVER provide property descriptions, prices, or lists in your text response. All properties must be found via the SEARCH: tool.
             5. INTERACTIVE BUTTONS: Always provide 2-4 helpful follow-up options using MANDATORY_OPTIONS_JSON: ["Option 1", "Option 2", ...]
             
