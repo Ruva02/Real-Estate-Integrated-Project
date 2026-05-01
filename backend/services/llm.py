@@ -69,7 +69,7 @@ def save_session_history(email: str, history: List[Dict]):
     db = SessionLocal()
     try:
         session = db.query(ChatSession).filter(ChatSession.email == email).first()
-        valid = [m for m in history[-10:] if isinstance(m, dict)]
+        valid = [m for m in history[-20:] if isinstance(m, dict)]
         if session:
             session.history = valid
             session.last_updated = datetime.utcnow()
@@ -80,13 +80,17 @@ def save_session_history(email: str, history: List[Dict]):
     except Exception as e: print(f"Save History Error: {e}")
     finally: db.close()
 
-def clean_history_for_context(history: List[Dict], limit: int = 3) -> str:
+def clean_history_for_context(history: List[Dict], limit: int = 6) -> str:
     clean = []
-    for m in history[-limit:]:
+    # Ensure we don't exceed the actual history length
+    actual_limit = min(len(history), limit)
+    for m in history[-actual_limit:] if actual_limit > 0 else []:
+        role = m.get('role', 'user')
         content = str(m.get('content', ''))
+        # Remove technical blocks to keep context clean but informative
         content = re.sub(r"(MANDATORY_JSON_RESULTS|SEARCH).*?(\[|\{).*?(\]|\})", "[Technical Data]", content, flags=re.DOTALL | re.IGNORECASE)
         content = re.sub(r"(MANDATORY_QUIZ_JSON).*?\{.*?\}", "[Quiz Data]", content, flags=re.DOTALL | re.IGNORECASE)
-        clean.append(f"{m.get('role', 'user')}: {content[:100]}")
+        clean.append(f"{role}: {content[:500]}") # Increased from 100 to 500
     return "\n".join(clean)
 
 def process_chat_message(email: str, message: str, mode: str = 'concierge') -> str:
@@ -152,7 +156,7 @@ def process_chat_message(email: str, message: str, mode: str = 'concierge') -> s
             5. INTERACTIVE BUTTONS: Always provide 2-4 helpful follow-up options using MANDATORY_OPTIONS_JSON: ["Option 1", "Option 2", ...]
             
             Persona: Sophisticated, helpful, and efficient. NEVER repeat information found in search results."""
-            context = clean_history_for_context(history, limit=2)
+            context = clean_history_for_context(history, limit=10)
             if not api_key:
                 raise ValueError("GROQ_API_KEY is missing or empty")
 
