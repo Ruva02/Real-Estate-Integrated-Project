@@ -106,14 +106,18 @@ def process_chat_message(email: str, message: str, mode: str = 'concierge') -> s
             else:
                 user_content = f"TEACHING MODE: Answer the user's question. Context: {context}\nUser: {message}"
             
+            if not api_key:
+                raise ValueError("GROQ_API_KEY_ACADEMY is missing or empty")
+                
             response = litellm.completion(
-                model="groq/llama-3.1-8b-instant",
+                model="groq/llama-3.3-70b-versatile",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_content}
                 ],
                 api_key=api_key,
-                temperature=0.2
+                temperature=0.2,
+                max_tokens=1024
             )
             result_str = response.choices[0].message.content
         else:
@@ -132,14 +136,18 @@ def process_chat_message(email: str, message: str, mode: str = 'concierge') -> s
             
             Persona: Sophisticated, helpful, and efficient. NEVER repeat information found in search results."""
             context = clean_history_for_context(history, limit=2)
+            if not api_key:
+                raise ValueError("GROQ_API_KEY is missing or empty")
+
             response = litellm.completion(
-                model="groq/llama-3.1-8b-instant",
+                model="groq/llama-3.3-70b-versatile",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": f"Context:\n{context}\n\nUser: {message}"}
                 ],
                 api_key=api_key,
-                temperature=0.2
+                temperature=0.2,
+                max_tokens=1024
             )
             result_str = response.choices[0].message.content
             if "SEARCH:" in result_str:
@@ -153,7 +161,8 @@ def process_chat_message(email: str, message: str, mode: str = 'concierge') -> s
 
     except Exception as e:
         print(f"Process Chat Error: {e}")
-        return f"I encountered a technical hiccup. ({str(e)[:30]})"
+        traceback.print_exc()
+        return f"I encountered a technical hiccup. ({str(e)[:100]})"
 
 def parse_analysis(text: str) -> dict:
     try:
