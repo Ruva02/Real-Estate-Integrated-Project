@@ -45,7 +45,8 @@ def perform_db_search(query_text: str) -> str:
         essential = []
         for p in results:
             d = p.to_dict()
-            d['property_id'] = d.pop('_id') # Ensure property_id exists for frontend
+            # Keep both _id (for frontend type) and property_id (for backend extraction check)
+            d['property_id'] = d.get('_id') or str(p.id)
             essential.append(d)
             
         return "MANDATORY_JSON_RESULTS: " + json.dumps(essential)
@@ -144,9 +145,10 @@ def process_chat_message(email: str, message: str, mode: str = 'concierge') -> s
             1. ANALYSIS: ALWAYS include an <analysis> JSON block at the end of every response.
                Format: <analysis>{"category": "Rent/Buy/Sell", "location": "City", "budget": "Amount", "bhk": "Number", "urgency": "High/Low"}</analysis>
             2. INFORMATION GATHERING: If the user hasn't provided their Location, Budget, or BHK, ask for them politely. Do not ask for everything at once; be conversational.
-            3. SEARCH: Whenever you have even a partial idea of what they want (e.g., just "buy in Indore"), you MUST include a line: SEARCH: action=..., location=... 
-               This triggers the property grid. ALWAYS include this if you have the location and action.
-            4. NO TEXT LISTS: NEVER provide property descriptions, prices, or lists in your text response. All properties must be found via the SEARCH: tool.
+            3. SEARCH: Whenever you have a location and action (buy/rent), you MUST include a line: SEARCH: action=..., location=... 
+               This triggers the property grid. DO NOT ASK for more info if you already have these two. Just trigger the search.
+            4. PERSISTENCE: If the user provides info, use it immediately. Do not repeat questions the user has already answered.
+            5. NO TEXT LISTS: NEVER provide property descriptions, prices, or lists in your text response. All properties must be found via the SEARCH: tool.
             5. INTERACTIVE BUTTONS: Always provide 2-4 helpful follow-up options using MANDATORY_OPTIONS_JSON: ["Option 1", "Option 2", ...]
             
             Persona: Sophisticated, helpful, and efficient. NEVER repeat information found in search results."""
@@ -165,7 +167,10 @@ def process_chat_message(email: str, message: str, mode: str = 'concierge') -> s
                 max_tokens=1024
             )
             result_str = response.choices[0].message.content
-            if "SEARCH:" in result_str:
+            
+            # Case-insensitive search trigger and logging
+            print(f"DEBUG: Concierge Response: {result_str[:100]}...")
+            if "SEARCH:" in result_str.upper():
                 search_results = perform_db_search(result_str)
                 result_str += f"\n\n{search_results}"
 
