@@ -22,18 +22,32 @@ load_dotenv(dotenv_path=env_path)
 def perform_db_search(query_text: str) -> str:
     db = SessionLocal()
     try:
-        action = re.search(r"action=(\w+)", query_text, re.I)
-        location = re.search(r"location=([\w\s]+)", query_text, re.I)
-        bhk = re.search(r"bhk=(\d+)", query_text, re.I)
-        price = re.search(r"price=(\d+)", query_text, re.I)
+        # More flexible regex to handle various formats
+        action_match = re.search(r"action\s*[:=]\s*(\w+)", query_text, re.I)
+        location_match = re.search(r"location\s*[:=]\s*([\w\s]+)", query_text, re.I)
+        bhk_match = re.search(r"bhk\s*[:=]\s*(\d+)", query_text, re.I)
+        price_match = re.search(r"price\s*[:=]\s*(\d+)", query_text, re.I)
+        
         q = db.query(Property)
-        if action: q = q.filter(func.lower(Property.action) == action.group(1).lower())
-        if location: q = q.filter(func.lower(Property.city) == location.group(1).strip().lower())
-        if bhk: q = q.filter(Property.bedrooms == int(bhk.group(1)))
-        if price: q = q.filter(Property.price <= float(price.group(1)))
+        if action_match: 
+            q = q.filter(func.lower(Property.action) == action_match.group(1).lower())
+        if location_match: 
+            q = q.filter(func.lower(Property.city) == location_match.group(1).strip().lower())
+        if bhk_match: 
+            q = q.filter(Property.bedrooms == int(bhk_match.group(1)))
+        if price_match: 
+            q = q.filter(Property.price <= float(price_match.group(1)))
+            
         results = q.order_by(Property.price.asc()).limit(6).all()
         if not results: return "[No matches found]"
-        essential = [{"property_id": str(p.id), "title": p.title[:25], "price": p.price, "location": p.city} for p in results]
+        
+        # Return full dictionary for each property
+        essential = []
+        for p in results:
+            d = p.to_dict()
+            d['property_id'] = d.pop('_id') # Ensure property_id exists for frontend
+            essential.append(d)
+            
         return "MANDATORY_JSON_RESULTS: " + json.dumps(essential)
     except Exception as e:
         print(f"Search Error: {e}")
@@ -130,7 +144,8 @@ def process_chat_message(email: str, message: str, mode: str = 'concierge') -> s
             1. ANALYSIS: ALWAYS include an <analysis> JSON block at the end of every response.
                Format: <analysis>{"category": "Rent/Buy/Sell", "location": "City", "budget": "Amount", "bhk": "Number", "urgency": "High/Low"}</analysis>
             2. INFORMATION GATHERING: If the user hasn't provided their Location, Budget, or BHK, ask for them politely. Do not ask for everything at once; be conversational.
-            3. SEARCH PREVIEW: If you have a hint of what they want (e.g., "rent"), use SEARCH: action=rent, location=... to show them a live preview while you continue the conversation.
+            3. SEARCH: Whenever you have even a partial idea of what they want (e.g., just "buy in Indore"), you MUST include a line: SEARCH: action=..., location=... 
+               This triggers the property grid. ALWAYS include this if you have the location and action.
             4. NO TEXT LISTS: NEVER provide property descriptions, prices, or lists in your text response. All properties must be found via the SEARCH: tool.
             5. INTERACTIVE BUTTONS: Always provide 2-4 helpful follow-up options using MANDATORY_OPTIONS_JSON: ["Option 1", "Option 2", ...]
             
