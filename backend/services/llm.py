@@ -48,7 +48,25 @@ def perform_db_search(query_text: str) -> str:
             except: pass
             
         results = q.order_by(Property.price.asc()).limit(6).all()
-        if not results: return "[No matches found]"
+        
+        # Fallback 1: Try without price if no results
+        if not results and price:
+            print("DEBUG: No results with price, retrying without price filter...")
+            q_fallback = db.query(Property)
+            if action: q_fallback = q_fallback.filter(func.lower(Property.action) == action.lower())
+            if location: q_fallback = q_fallback.filter(Property.city.ilike(f"%{location}%"))
+            if bhk: q_fallback = q_fallback.filter(Property.bedrooms == int(bhk))
+            results = q_fallback.order_by(Property.price.asc()).limit(6).all()
+
+        # Fallback 2: Try without BHK if still no results
+        if not results and bhk:
+            print("DEBUG: Still no results, retrying without BHK filter...")
+            q_fallback2 = db.query(Property)
+            if action: q_fallback2 = q_fallback2.filter(func.lower(Property.action) == action.lower())
+            if location: q_fallback2 = q_fallback2.filter(Property.city.ilike(f"%{location}%"))
+            results = q_fallback2.order_by(Property.price.asc()).limit(6).all()
+
+        if not results: return "[No matches found in this city]"
         
         # Return full dictionary for each property
         essential = []
@@ -182,8 +200,20 @@ def process_chat_message(email: str, message: str, mode: str = 'concierge') -> s
             result_str = response.choices[0].message.content
             
             # Case-insensitive search trigger and logging
-            print(f"DEBUG: Concierge Response: {result_str[:100]}...")
-            if "SEARCH:" in result_str.upper():
+            print(f"DEBUG: Concierge Response: {result_str[:200]}...")
+            
+            # Secondary trigger: If analysis has location but no SEARCH: command exists
+            analysis_data = parse_analysis(result_str)
+            has_search_command = "SEARCH:" in result_str.upper()
+            
+            if not has_search_command and analysis_data.get('location') and analysis_data.get('category'):
+                print("DEBUG: No SEARCH command but analysis present, forcing search...")
+                synth_search = f"SEARCH: action={analysis_data['category']}, location={analysis_data['location']}"
+                if analysis_data.get('budget'): synth_search += f", price={analysis_data['budget']}"
+                if analysis_data.get('bhk'): synth_search += f", bhk={analysis_data['bhk']}"
+                search_results = perform_db_search(synth_search)
+                result_str += f"\n\n{search_results}"
+            elif has_search_command:
                 search_results = perform_db_search(result_str)
                 result_str += f"\n\n{search_results}"
 
